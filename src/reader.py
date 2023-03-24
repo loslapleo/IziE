@@ -6,4 +6,10 @@ def readFromFile(file_name):
             for word in line.split():
                 line_words.append(word)
             arr.append(line_words)
+    return arrayStrToInt(arr)
+
+def arrayStrToInt(arr):
+    for i in range(len(arr)):
+        for j in range(len(arr[i])):
+            arr[i][j] = int(arr[i][j])
     return arr
