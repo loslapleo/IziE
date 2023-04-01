@@ -1,122 +1,128 @@
-# The original model for problem.
+# Array containing the original model for the current problem.
 model = []
-# Array of all subs that have been calculated so far.
-all_subs = []
-# Array of subs in form; [<index>, <z>, [<values locked?>], [<binary values>]],
-# that can be iterated on.
-available_subs = []
-# Current number of sub answers.
+# Current number of subs.
 sub_counter = 0
 
-# Main function to be called by other functions. Initialises global model.
+# Binary tree containing all subs that have been calculated.
+class Sub:
+    # Initialises sub object.
+    def __init__(self, sub, iterateable):
+        self.left = None
+        self.right = None
+        self.sub = sub
+        self.iterateable = iterateable
+
+    # Returns the sub.
+    def getSub(self):
+        return self.sub
+
+    # Returns if sub iterateable.
+    def getIterateable(self):
+        return self.iterateable
+
+    # Gets the amount of iterateable subs after and including this sub.
+    def getIterateableAmount(self):
+        amount = 0
+        if self.iterateable:
+            amount += 1
+        if self.left:
+            amount += self.left.getIterateableAmount()
+        if self.right:
+            amount += self.right.getIterateableAmount()
+        return amount
+
+    # Inserts left sub object.
+    def insertLeftSub(self, sub, iterateable):
+        self.left = Sub(sub, iterateable)
+    
+    # Inserts left sub object.
+    def insertRightSub(self, sub, iterateable):
+        self.right = Sub(sub, iterateable)
+
+    # Prints current sub and all its children.
+    def printSubs(self):
+        print("{} {}".format(self.iterateable, self.sub))
+        if self.left:
+            self.left.printSubs()
+        if self.right:
+            self.right.printSubs()
+
+# Main function to be called by other files.
 def implicitEnumeration(arr):
     global model
-    global available_subs
     model = arr
-    print("MODEL:")
-    printModel()
-    print("\n----------------------------------------------------------------\n")
+    iteration = 0
+    print(model)
+
+    print("\nIteration {}:".format(iteration))
+    iteration += 1
     master = getMaster()
-    all_subs.append(master)
-    available_subs.append(master)
-    iteration = 0; # TODO temp
-    while len(available_subs) > 0 and iteration < 5:
-        iteration += 1
-        max_z = available_subs[0][1]
-        max_index = 0
-        # Finds the the sub with the maximum z value.
-        for i in range(len(available_subs)):
-            if available_subs[i][1] > max_z:
-                max_z = available_subs[i][1]
-                max_index = i
-        # Gets the left and right sub of sub.
-        left_sub = getSub(available_subs[max_index], 0)
-        right_sub = getSub(available_subs[max_index], 1)
-        # Adds those subs to list of available subs.
-        if len(left_sub) > 0:
-            all_subs.append(left_sub)
-            available_subs.append(left_sub)
-        if len(right_sub) > 0:
-            all_subs.append(right_sub)
-            available_subs.append(right_sub)
+    rootSub = Sub(master, True)
+    rootSub.printSubs()
+
+    print("\nIteration {}:".format(iteration))
+    iteration += 1
+    arr = getSubs(rootSub.getSub())
+    rootSub.insertLeftSub(arr, True)
+    arr = getSubs(rootSub.getSub())
+    rootSub.insertRightSub(arr, False)
+    rootSub.printSubs()
 
 # Returns:
-# - <-1> if error
-# - <0> if no feasible completion.
-# - <1> if there might be feasible completion after this iteration.
-# - <2> if candidate solution.
+# <-1> if error.
+# <0> if no feasible completion.
+# <1> if feasibility might exist in oncoming solutions.
+# <2> if candidate solution.
 def isFeasible(arr):
     global model
-    answer = 2
+    output = 2
+
     for i in range(len(model) - 1):
         t = 0
         z = 0
+
         for j in range(len(arr)):
             t += arr[j] * model[i + 1][j]
             z = model[i + 1][j + 1]
+
         if t > z:
-            if answer == 2:
-                answer = 0
+            if output == 2:
+                output = 0
         else:
-            if answer == 0:
-                answer = 1
-    return answer
+            if output == 0:
+                output = 1
 
-# Prints model
-def printModel():
-    # TODO: do this better
-    global model
-    for row in model:
-        print(row)
+    return output
 
-# Gets master solution in form
-# [<index>, <z>, <values locked>, [<binary values>]]. Call this function only
-# once before any subs are calculated.
+# Gets master solution in form <[<index>, <z>, <# fixed variables>,
+# [<binary values>]]>. Should only be called once before all other subs are
+# calculated.
 def getMaster():
     global model
     global sub_counter
     master = []
     binary = []
     z = 0
+
     for i in range(len(model[0])):
         if model[0][i] < 0:
             binary.append(0)
         else:
             binary.append(1)
             z += model[0][i]
+
     master.append(sub_counter)
     sub_counter += 1
     master.append(z)
     master.append(0)
     master.append(binary)
+
     return master
 
-# Gets the left (side = 0) or right (side = 1) sub of given solution in the form
-# [<index>, <z>, <values locked>, [<binary values>]]
-def getSub(arr, side):
-    # TODO do this functions
-    sub = []
-    add_sub = False
-    feasible = isFeasible(arr[3])
-    # Not a feasible solution and no solution after this solution.
-    if feasible == -1:
-        print("Error")
-        # TODO stop program
-    # Not a feasible solution and no solution after this solution.
-    if feasible == 0:
-        # TODO write to output but keep sub empty
-        print("feasible: 0")
-        add_sub = True
-    # Not a candidate soltution but could contain a candidate solution after
-    # this solution.
-    elif feasible == 1:
-        # TODO
-        print("feasible: 1")
-        add_sub = True
-    # Candidate solution.
-    elif feasible == 2:
-        # TODO
-        print("feasible: 2")
-        add_sub = True
-    # TODO add sub to all_subs if necessary
+# Generates the left and right sub of the given solution in the format
+# <[<index>, <z>, <# fixed variables>, [<binary values>]]>.
+def getSubs(arr):
+    global sub_counter
+    sub = [sub_counter]
+    sub_counter += 1
     return sub
